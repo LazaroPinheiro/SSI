@@ -1,0 +1,15 @@
+{
+    "sms_sender": {
+        "sourceName": "Group11_SSI",
+        "nexmo": {
+            "key": "51836dec",
+            "secret": "9YOOaF61c0HDAZvE"
+        }
+    },
+    "token_generator": {
+        "token_size": 12
+    },
+    "user_manager": {
+        "pathUsersFile": "resources/pathUsers.txt"
+    }
+}
