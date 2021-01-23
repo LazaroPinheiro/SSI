@@ -1,22 +1,28 @@
 import json
+import sys
+from subprocess import call
 
-from models.user import user
+from fuse import FUSE
+
+from business import user_manager
+from business.passthrough import Passthrough
+from models.configurations import configurations
 
 
-def load_configs():
+def load_configurations():
     with open("resources/config.json") as json_data_file:
-        return json.load(json_data_file)
+        jsonString = json.load(json_data_file)
+        return configurations(jsonString['sms_sender']['sourceName'], jsonString['sms_sender']['nexmo']['key'],
+                              jsonString['sms_sender']['nexmo']['secret'], jsonString['token_generator']['token_size'],
+                              jsonString['user_manager']['pathUsersFile'])
 
 
 if __name__ == '__main__':
-    #u = user('joao', 913136226)
-    n = '3519342346'
-    x = user.validatePhoneNumber(n)
+    if len(sys.argv) != 3:
+        sys.exit("Insufficient Number Of Arguments!")
 
-    print(x)
-    #u = user_management("resources/users.txt")
-    #u.addNewUser('artur', '913136226')
-    #print(u.getNumber('armindo'))
     # call("sh setup/setup.sh", shell=True)
-    #jsonData = load_configs()
-
+    configurations = load_configurations()
+    root = sys.argv[1]
+    mountpoint = sys.argv[2]
+    FUSE(Passthrough(root, configurations), mountpoint, nothreads=True, foreground=True)
