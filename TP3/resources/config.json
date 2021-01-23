@@ -10,6 +10,6 @@
         "token_size": 12
     },
     "user_manager": {
-        "pathUsersFile": "resources/pathUsers.txt"
+        "pathUsersFile": "resources/users.txt"
     }
 }
