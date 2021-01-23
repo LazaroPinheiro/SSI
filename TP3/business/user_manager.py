@@ -13,11 +13,18 @@ class user_manager:
             os.chmod(self.usersFilePath, 000)
 
     def getUser(self, username):
+        success = False
+
         os.chmod(self.usersFilePath, 400)
+
         with open(self.usersFilePath, 'r') as usersFile:
             for line in usersFile:
                 str_user = line.split(':')
                 if str_user[0] == username:
-                    os.chmod(self.usersFilePath, 000)
-                    return user(str_user[0], str_user[1])
-        raise ValueError("User doesn't exists!")
+                    success = True
+
+        os.chmod(self.usersFilePath, 000)
+        if success:
+            return user(str_user[0], str_user[1])
+        else:
+            raise Exception("User doesn't exists!")

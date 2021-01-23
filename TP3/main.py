@@ -4,8 +4,7 @@ from subprocess import call
 
 from fuse import FUSE
 
-from business import user_manager
-from business.passthrough import Passthrough
+from business.fuseController import FuseController
 from models.configurations import configurations
 
 
@@ -14,7 +13,8 @@ def load_configurations():
         jsonString = json.load(json_data_file)
         return configurations(jsonString['sms_sender']['sourceName'], jsonString['sms_sender']['nexmo']['key'],
                               jsonString['sms_sender']['nexmo']['secret'], jsonString['token_generator']['token_size'],
-                              jsonString['user_manager']['pathUsersFile'])
+                              jsonString['user_manager']['pathUsersFile'], jsonString['fuse_controller']['timeout_time']
+                              )
 
 
 if __name__ == '__main__':
@@ -25,4 +25,4 @@ if __name__ == '__main__':
     configurations = load_configurations()
     root = sys.argv[1]
     mountpoint = sys.argv[2]
-    FUSE(Passthrough(root, configurations), mountpoint, nothreads=True, foreground=True)
+    FUSE(FuseController(root, configurations), mountpoint, nothreads=True, foreground=True)

@@ -1,21 +1,28 @@
-
 import os
 import errno
+import signal
 
 from fuse import FUSE, FuseOSError, Operations
 
 from business.user_manager import user_manager
 from services.sms_sender import sms_sender
 from services.token_generator import token_generator
+from view.view import view
 
 
-class Passthrough(Operations):
+def timeout_handler():
+    raise IOError("Time Out")
+
+
+class FuseController(Operations):
 
     def __init__(self, root, configurations):
+        self.view = view()
         self.root = root
         self.token_generator = token_generator(configurations.token_size)
         self.sms_sender = sms_sender(configurations.sourceName, configurations.nexmo_key, configurations.nexmo_secret)
         self.user_manager = user_manager(configurations.pathUsersFile)
+        self.timeout_time = configurations.timeout_time
 
     # Helpers
     # =======
@@ -45,7 +52,8 @@ class Passthrough(Operations):
         full_path = self._full_path(path)
         st = os.lstat(full_path)
         return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
-                     'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+                                                        'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size',
+                                                        'st_uid'))
 
     def readdir(self, path, fh):
         full_path = self._full_path(path)
@@ -78,8 +86,9 @@ class Passthrough(Operations):
         full_path = self._full_path(path)
         stv = os.statvfs(full_path)
         return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
-            'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
-            'f_frsize', 'f_namemax'))
+                                                         'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files',
+                                                         'f_flag',
+                                                         'f_frsize', 'f_namemax'))
 
     def unlink(self, path):
         return os.unlink(self._full_path(path))
@@ -101,7 +110,40 @@ class Passthrough(Operations):
 
     def open(self, path, flags):
         full_path = self._full_path(path)
-        return os.open(full_path, flags)
+
+        username = view.getUserName()
+
+        # try:
+        user = self.user_manager.getUser(username)
+        # except Exception:
+
+        # except ValueError:
+
+        generatedToken = self.token_generator.get_random_string()
+
+        # success = self.sms_sender.send_message(user, generatedToken)
+        success = True
+
+        if success:
+
+            try:
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(self.timeout_time)
+                insertedToken = view.getToken(user.phoneNumber)
+                yield
+                signal.alarm(0)
+
+                if str(insertedToken) == generatedToken:
+                    return os.open(full_path, flags)
+                else:
+                    return 0
+
+            except IOError:
+                view.timedOut()
+                return 0
+
+        else:
+            return 0
 
     def create(self, path, mode, fi=None):
         full_path = self._full_path(path)
