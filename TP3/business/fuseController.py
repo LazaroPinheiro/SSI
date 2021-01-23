@@ -1,7 +1,15 @@
 import os
+import sys
+import stat
 import errno
+import random
 import signal
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+import nexmo
 from fuse import FUSE, FuseOSError, Operations
 
 from business.user_manager import user_manager
@@ -10,29 +18,37 @@ from services.token_generator import token_generator
 from view.view import view
 
 
-def timeout_handler():
-    raise IOError("Time Out")
+def handler(signum, frame):
+    raise IOError("Timeout")
 
 
 class FuseController(Operations):
 
     def __init__(self, root, configurations):
-        self.view = view()
         self.root = root
+        self.view = view()
+
+        try:
+            self.user_manager = user_manager(configurations.pathUsersFile)
+        except FileNotFoundError:
+            self.view.usersFileAbsent()
+            exit(1)
+
         self.token_generator = token_generator(configurations.token_size)
-        self.sms_sender = sms_sender(configurations.sourceName, configurations.nexmo_key, configurations.nexmo_secret)
-        self.user_manager = user_manager(configurations.pathUsersFile)
+        self.sms_sender = sms_sender(configurations.sourceName, configurations.nexmo_key,
+                                     configurations.nexmo_secret)
         self.timeout_time = configurations.timeout_time
 
     # Helpers
     # =======
 
     def _full_path(self, partial):
-        partial = partial.lstrip("/")
+        if partial.startswith("/"):
+            partial = partial[1:]
         path = os.path.join(self.root, partial)
         return path
 
-    # Filesystem methods
+    # Filesystem Methods
     # ==================
 
     def access(self, path, mode):
@@ -94,18 +110,18 @@ class FuseController(Operations):
         return os.unlink(self._full_path(path))
 
     def symlink(self, name, target):
-        return os.symlink(name, self._full_path(target))
+        return os.symlink(target, self._full_path(name))
 
     def rename(self, old, new):
         return os.rename(self._full_path(old), self._full_path(new))
 
     def link(self, target, name):
-        return os.link(self._full_path(target), self._full_path(name))
+        return os.link(self._full_path(name), self._full_path(target))
 
     def utimens(self, path, times=None):
         return os.utime(self._full_path(path), times)
 
-    # File methods
+    # File Methods
     # ============
 
     def open(self, path, flags):
@@ -113,36 +129,36 @@ class FuseController(Operations):
 
         username = view.getUserName()
 
-        # try:
-        user = self.user_manager.getUser(username)
-        # except Exception:
-
-        # except ValueError:
+        try:
+            user = self.user_manager.getUser(username)
+        except Exception:
+            self.view.usernameAbsent()
 
         generatedToken = self.token_generator.get_random_string()
 
-        # success = self.sms_sender.send_message(user, generatedToken)
-        success = True
+        print(generatedToken)
+
+        success = True # self.sms_sender.send_message(user, generatedToken)
 
         if success:
 
             try:
-                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.signal(signal.SIGALRM, handler)
                 signal.alarm(self.timeout_time)
-                insertedToken = view.getToken(user.phoneNumber)
-                yield
+                insertedToken = self.view.getToken(user.phoneNumber)
                 signal.alarm(0)
 
                 if str(insertedToken) == generatedToken:
+                    self.view.accessConceded(full_path)
                     return os.open(full_path, flags)
                 else:
+                    self.view.accessDenied()
                     return 0
-
-            except IOError:
-                view.timedOut()
+            except:
+                self.view.timedOut()
                 return 0
-
         else:
+            self.view.errorSendingEmail()
             return 0
 
     def create(self, path, mode, fi=None):
