@@ -65,6 +65,13 @@ class view:
     def usersFileAbsent():
         print("\n\nSomething went Wrong.\nPlease contact system administrator!\n")
 
+    def invalidPhoneNumber(self):
+        print("\033c")
+        print("\n\nYour phone number is invalid.\nPlease contact system administrator!\n")
+        time.sleep(2)
+        print("\033c")
+        self.__printWelcomeMessage()
+
     def errorSendingEmail(self):
         print("\033c")
         print("\n\nSomething went wrong sending token to you.\nPlease try again later!\n")

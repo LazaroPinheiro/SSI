@@ -1,25 +1,19 @@
-import os
-import sys
-import stat
 import errno
-import random
+import os
 import signal
 
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
-import nexmo
-from fuse import FUSE, FuseOSError, Operations
+from fuse import FuseOSError, Operations
 
 from business.user_manager import user_manager
+from exceptions.phoneNumberInvalidException import PhoneNumberInvalidException
+from exceptions.userDoestExistsException import UserDoestExistsException
 from services.sms_sender import sms_sender
 from services.token_generator import token_generator
 from view.view import view
 
 
 def handler(signum, frame):
-    raise IOError("Timeout")
+    raise TimeoutError('Timeout exceeded')
 
 
 class FuseController(Operations):
@@ -131,34 +125,39 @@ class FuseController(Operations):
 
         try:
             user = self.user_manager.getUser(username)
-        except Exception:
-            self.view.usernameAbsent()
 
-        generatedToken = self.token_generator.get_random_string()
+            generatedToken = self.token_generator.get_random_string()
 
-        print(generatedToken)
+            print(generatedToken)
 
-        success = True # self.sms_sender.send_message(user, generatedToken)
+            success = True  # self.sms_sender.send_message(user, generatedToken)
 
-        if success:
+            if success:
 
-            try:
-                signal.signal(signal.SIGALRM, handler)
-                signal.alarm(self.timeout_time)
-                insertedToken = self.view.getToken(user.phoneNumber)
-                signal.alarm(0)
+                try:
+                    signal.signal(signal.SIGALRM, handler)
+                    signal.alarm(self.timeout_time)
+                    insertedToken = self.view.getToken(user.phoneNumber)
+                    signal.alarm(0)
 
-                if str(insertedToken) == generatedToken:
-                    self.view.accessConceded(full_path)
-                    return os.open(full_path, flags)
-                else:
-                    self.view.accessDenied()
+                    if str(insertedToken) == generatedToken:
+                        self.view.accessConceded(full_path)
+                        return os.open(full_path, flags)
+                    else:
+                        self.view.accessDenied()
+                        return 0
+                except TimeoutError:
+                    self.view.timedOut()
                     return 0
-            except:
-                self.view.timedOut()
+            else:
+                self.view.errorSendingEmail()
                 return 0
-        else:
-            self.view.errorSendingEmail()
+
+        except UserDoestExistsException:
+            self.view.usernameAbsent(username)
+            return 0
+        except PhoneNumberInvalidException:
+            self.view.invalidPhoneNumber()
             return 0
 
     def create(self, path, mode, fi=None):

@@ -1,5 +1,6 @@
 import os
 
+from exceptions.userDoestExistsException import UserDoestExistsException
 from models.user import user
 
 
@@ -27,4 +28,4 @@ class user_manager:
         if success:
             return user(str_user[0], str_user[1])
         else:
-            raise Exception("User doesn't exists!")
+            raise UserDoestExistsException(username)
