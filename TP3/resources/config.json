@@ -11,5 +11,8 @@
     },
     "user_manager": {
         "pathUsersFile": "resources/users.txt"
+    },
+    "fuse_controller": {
+        "timeout_time": 30
     }
 }

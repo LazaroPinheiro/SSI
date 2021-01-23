@@ -10,7 +10,8 @@ class sms_sender:
     def send_message(self, user, token):
         try:
             client = nexmo.Client(key=self.key, secret=self.secret)
-            client.send_message({'from': self.sourceName, 'to': user.phoneNumber, 'text': 'O seu token é : {}!'.format(token)})
+            client.send_message(
+                {'from': self.sourceName, 'to': user.phoneNumber, 'text': 'O seu token é : {}!'.format(token)})
             return True
         except:
             return False
