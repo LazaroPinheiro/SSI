@@ -29,8 +29,8 @@ class FuseController(Operations):
             exit(1)
 
         self.token_generator = token_generator(configurations.token_size)
-        self.sms_sender = sms_sender(configurations.sourceName, configurations.nexmo_key,
-                                     configurations.nexmo_secret)
+        self.sms_sender = sms_sender(configurations.nexmo_key,
+                                     configurations.nexmo_secret, configurations.sourceName)
         self.timeout_time = configurations.timeout_time
 
     # Helpers
@@ -125,40 +125,38 @@ class FuseController(Operations):
 
         try:
             user = self.user_manager.getUser(username)
-
-            generatedToken = self.token_generator.get_random_string()
-
-            print(generatedToken)
-
-            success = True  # self.sms_sender.send_message(user, generatedToken)
-
-            if success:
-
-                try:
-                    signal.signal(signal.SIGALRM, handler)
-                    signal.alarm(self.timeout_time)
-                    insertedToken = self.view.getToken(user.phoneNumber)
-                    signal.alarm(0)
-
-                    if str(insertedToken) == generatedToken:
-                        self.view.accessConceded(full_path)
-                        return os.open(full_path, flags)
-                    else:
-                        self.view.accessDenied()
-                        return 0
-                except TimeoutError:
-                    self.view.timedOut()
-                    return 0
-            else:
-                self.view.errorSendingEmail()
-                return 0
-
         except UserDoestExistsException:
             self.view.usernameAbsent(username)
-            return 0
+            return self.access(path, flags)
         except PhoneNumberInvalidException:
             self.view.invalidPhoneNumber()
-            return 0
+            return self.access(path, flags)
+
+        generatedToken = self.token_generator.get_random_string()
+
+        success = self.sms_sender.send_message(user, generatedToken)
+
+        if success:
+
+            try:
+                signal.signal(signal.SIGALRM, handler)
+                signal.alarm(self.timeout_time)
+                insertedToken = self.view.getToken(user.phoneNumber)
+                signal.alarm(0)
+
+                if str(insertedToken) == generatedToken:
+                    self.view.accessConceded(full_path)
+                    return os.open(full_path, flags)
+                else:
+                    self.view.accessDenied()
+                    return self.access(path, flags)
+            except TimeoutError:
+                self.view.timedOut()
+                return self.access(path, flags)
+
+        else:
+            self.view.errorSendingSMS()
+            return self.access(path, flags)
 
     def create(self, path, mode, fi=None):
         full_path = self._full_path(path)

@@ -24,7 +24,7 @@ if __name__ == '__main__':
     if len(sys.argv) != 3:
         sys.exit("Insufficient Number Of Arguments!")
 
-    # call("sh setup/setup.sh", shell=True)
+    call("sh setup/setup.sh", shell=True)
     configurations = load_configurations()
     root = sys.argv[1]
     mountpoint = sys.argv[2]

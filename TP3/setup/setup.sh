@@ -1,9 +1,5 @@
 #!/bin/sh
 
-a=python3
-b=pip3
-
-
 case "$(uname -s)" in
    Darwin)
      echo 'No support to MacOS!'
@@ -11,6 +7,7 @@ case "$(uname -s)" in
      ;;
 
    Linux)
+     echo 'Linux does supports this app.\\nBeginning setup!'
      ;;
 
    CYGWIN*|MINGW32*|MSYS*|MINGW*)
@@ -23,9 +20,12 @@ case "$(uname -s)" in
      ;;
 esac
 
-if ! python3 --version ; then
-    echo "python3 is not installed"
-fi
 
-#pip install nexmo
-#pip3 install nexmo
+if which pip3 > /dev/null 2>&1;
+then
+    echo Installing Nexmo
+    pip3 install nexmo
+else
+    echo Installing Nexmo
+    pip install nexmo
+fi

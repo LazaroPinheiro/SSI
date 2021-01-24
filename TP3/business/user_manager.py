@@ -11,18 +11,19 @@ class user_manager:
         if not os.path.exists(self.usersFilePath):
             raise FileNotFoundError("File doesn't exists!")
         else:
+            pass
             os.chmod(self.usersFilePath, 000)
 
     def getUser(self, username):
         success = False
 
         os.chmod(self.usersFilePath, 400)
-
         with open(self.usersFilePath, 'r') as usersFile:
             for line in usersFile:
                 str_user = line.split(':')
                 if str_user[0] == username:
                     success = True
+                    break
 
         os.chmod(self.usersFilePath, 000)
         if success:

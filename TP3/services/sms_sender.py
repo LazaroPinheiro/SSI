@@ -8,10 +8,21 @@ class sms_sender:
         self.sourceName = sourceName
 
     def send_message(self, user, token):
-        try:
-            client = nexmo.Client(key=self.key, secret=self.secret)
-            client.send_message(
-                {'from': self.sourceName, 'to': user.phoneNumber, 'text': 'O seu token é : {}!'.format(token)})
+        client = nexmo.Client(key=self.key, secret=self.secret)
+
+        responseData = client.send_message({
+            'from': str(self.sourceName),
+            'to': str(user.phoneNumber),
+            'text': 'O seu token é : {}!'.format(token)
+        })
+
+        response = responseData['messages'][0]
+
+        if response['status'] == '0':
+            # print('Sent message', response['message-id'])
+
+            # print('Remaining balance is', response['remaining-balance'])
             return True
-        except:
+        else:
+            # print('Error:', response['error-text'])
             return False

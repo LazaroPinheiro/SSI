@@ -16,7 +16,7 @@ class view:
     @staticmethod
     def getUserName():
         return input(
-            "\n\nPlease type your user name.\n" +
+            "\n\nPlease type your username.\n" +
             "Username:"
         )
 
@@ -72,7 +72,7 @@ class view:
         print("\033c")
         self.__printWelcomeMessage()
 
-    def errorSendingEmail(self):
+    def errorSendingSMS(self):
         print("\033c")
         print("\n\nSomething went wrong sending token to you.\nPlease try again later!\n")
         time.sleep(2)
